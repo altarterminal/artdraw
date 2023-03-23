@@ -112,8 +112,8 @@ BEGIN {
   x = $1; y = $2;
 
   # 文字を出力
-  if   (NF >= 3) { buf[x,y] = $3;   }
-  else           { buf[x,y] = "■"; }
+  if   (NF >= 3) { buf[y,x] = $3;   }
+  else           { buf[y,x] = "■"; }
 }
 
 END {
