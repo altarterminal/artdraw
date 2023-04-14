@@ -32,7 +32,7 @@ do
   case "$arg" in
     -h|--help|--version) print_usage_and_exit ;;
     *)
-      if [ $i -eq $# ] && [ -z "$opr" ] ; then
+      if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
       else
         echo "${0##*/}: invalid args" 1>&2
@@ -45,7 +45,7 @@ do
 done
 
 # 有効なパラメータ指定か確認
-if ! printf '%s' "$opr" | grep -Eq '^-?[0-9]+,-?[0-9]+,[0-9]+$'; then
+if ! printf '%s\n' "$opr" | grep -Eq '^-?[0-9]+,-?[0-9]+,[0-9]+$'; then
   echo "${0##*/}: \"$opr\" invalid parameter" 1>&2
   exit 21
 fi
@@ -57,7 +57,7 @@ param=$opr
 # 本体処理
 ######################################################################
 
-awk '
+gawk '
 BEGIN {
   param = "'"${param}"'";
 

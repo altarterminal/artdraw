@@ -57,7 +57,7 @@ else
 fi
 
 # 一文字であることを確認
-if ! printf '%s' "$opt_s" | grep -q '^.$'; then
+if ! printf '%s\n' "$opt_s" | grep -Eq '^.?$'; then
   echo "${0##*/}: \"$opt_s\" invalid seperate character" 1>&2
   exit 31
 fi
