@@ -28,7 +28,7 @@ print_usage_and_exit () {
 # 変数を初期化
 opr=''
 opt_p=''
-opt_c='40'
+opt_c='■'
 
 # 引数をパース
 i=1
@@ -62,12 +62,12 @@ else
 fi
 
 # 有効な数値であるか判定
-if ! printf '%s\n' "$opt_p" | grep -Eq '^[0-9]+$'; then
+if ! printf '%s\n' "$opt_p" | grep -Eq '^[0-9]+,[0-9]+$'; then
   echo "${0##*/}: \"$opt_p\" invalid coordinate" 1>&2
   exit 31
 fi
 
-# 有効な数値であるか判定
+# 有効な文字であるか判定
 if ! printf '%s\n' "$opt_c" | grep -Eq '^.$'; then
   echo "${0##*/}: \"$opt_c\" invalid character" 1>&2
   exit 41
@@ -82,52 +82,62 @@ tchar=$opt_c
 # 本体処理
 ######################################################################
 
-
-
-
 gawk '
 BEGIN {
   # パラメータを設定
-  height = '"${height}"';
-  width  = '"${width}"';
+  sp    = "'"${sp}"'";
+  tchar = "'"${tchar}"'";
+
+  # パラメータを初期化
+  pn = 0; # 点数
+  inpx[1];    # 入力点のx座標
+  inpy[1];    # 入力点のy座標
+
+  # 座標の最大値を初期化
+  pxmax = -1;
+  pymax = -1;
+}
+
+{
+  curpx = $1;
+  curpy = $2;
+
+  # 座標を記録
+  pn++;
+  inpx[pn] = curpx;
+  inpy[pn] = curpy;
+
+  # 最大値を更新
+  pxmax = (pxmax < curpx) ? curpx : pxmax;
+  pymax = (pymax < curpy) ? curpy : pymax;
+}
+
+END {
+  # 別名の変数を作成
+  width  = pxmax;
+  height = pymax;
 
   # 空のキャンバスを作成
   for (i = 1; i <= height; i++) {
     for (j = 1; j <= width; j++) {
-      buf[i,j] = "□";
+      map[i,j] = "blank";
     }
   }
 
-  # エラーステータスを初期化
-  estate = 0;
-}
-
-{
-  # データの整合性をチェック
-  if (($1 !~ /^-?[0-9]+$/) || ($2 !~ /^-?[0-9]+$/)) {
-    print "'"${0##*/}"': invalid number at line " NR > "/dev/stderr";
-    estate = 51;
-    exit estate;
+  # 存在する座標をマーク
+  for (i = 1; i <= pn; i++) {
+    map[inpx[i],inpy[i]] = "exist"
   }
 
-  # 座標値を確定
-  x = $1; y = $2;
-
-  # 文字を出力
-  if   (NF >= 3) { buf[y,x] = $3;   }
-  else           { buf[y,x] = "■"; }
-}
-
-END {
-  if (estate == 0) {
-    # データに不整合がなければキャンバスを出力
-    for (i = 1; i <= height; i++) {
-      for (j = 1; j <= width; j++) {
-        printf "%s", buf[i,j];
-      }
-
-      print "";
-    }
-  }
+  # テスト
+  # for (i = 1; i <= height; i++) {
+  #   for (j = 1; j <= width; j++) {
+  #     if (map[i,j] == "exist") {
+  #       printf "(%2d, %2d): exist\n", i, j;
+  #     } else {
+  #       printf "(%2d, %2d): blank\n", i, j;
+  #     }
+  #   }
+  # }
 }
 ' ${coord-:"$coord"}
