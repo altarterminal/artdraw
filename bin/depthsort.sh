@@ -96,6 +96,11 @@ BEGIN {
   # 座標の最大値を初期化
   pxmax = -1;
   pymax = -1;
+
+  # 開始座標を分離
+  split(sp, sary, ",");
+  sx = sary[1];
+  sy = sary[2];
 }
 
 {
@@ -117,6 +122,10 @@ END {
   width  = pxmax;
   height = pymax;
 
+  # スタックを初期化（グローバル変数なので注意）
+  st[1];
+  nst = 1;
+
   # 空のキャンバスを作成
   for (i = 1; i <= height; i++) {
     for (j = 1; j <= width; j++) {
@@ -124,20 +133,72 @@ END {
     }
   }
 
-  # 存在する座標をマーク
+  # 存在する座標をチェック
   for (i = 1; i <= pn; i++) {
     map[inpx[i],inpy[i]] = "exist"
   }
 
-  # テスト
-  # for (i = 1; i <= height; i++) {
-  #   for (j = 1; j <= width; j++) {
-  #     if (map[i,j] == "exist") {
-  #       printf "(%2d, %2d): exist\n", i, j;
-  #     } else {
-  #       printf "(%2d, %2d): blank\n", i, j;
-  #     }
-  #   }
-  # }
+  # 開始座標が領域に含まれていないならエラー
+  if (map[sy,sx] == "blank") {
+    msg = "'"${0##*/}"': invalid start point";
+    print msg > "/dev/stderr";
+    exit 51;
+  }
+
+  # 開始座標をスタックにプッシュ
+  c[1] = sx; c[2] = sy; push(c);
+
+  # 深さ優先探索を開始
+  while(isempty() != "empty") {
+    # スタックが空でない限り継続
+
+    # スタックから一要素を取得
+    pop(c); cx = c[1]; cy = c[2];
+
+    # 要素をマップ上でマーク
+    map[cy,cx] = "marked";
+
+    # 要素を出力
+    print cx, cy;
+
+    # 要素の周辺領域を探索
+    if (map[cy-1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy-1;push(c);}
+    if (map[cy-1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy-1;push(c);}
+    if (map[cy-1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy-1;push(c);}
+    if (map[cy  ,cx-1]=="exist") { c[1]=cx-1;c[2]=cy  ;push(c);}
+    if (map[cy  ,cx+1]=="exist") { c[1]=cx+1;c[2]=cy  ;push(c);}
+    if (map[cy+1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy+1;push(c);}
+    if (map[cy+1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy+1;push(c);}
+    if (map[cy+1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy+1;push(c);}
+  }
 }
+
+# スタックへのプッシュ（st,nstはグローバル変数）
+function push(c,  x,y) {
+  x = c[1];
+  y = c[2];
+  st[nst] = x "," y;
+  nst++;
+}
+
+# スタックからのポップ（st,nstはグローバル変数）
+function pop(c,  ary) {
+  if (nst == 1) {
+    c[1] = "null";
+    c[2] = "null";
+  }
+  else {
+    nst--;
+    split(st[nst], ary, ",");
+    c[1] = ary[1];
+    c[2] = ary[2];
+  }
+}
+
+# スタックが空か（st,nstはグローバル変数）
+function isempty() {
+  if (nst == 1) { return "empty"; }
+  else          { return "some";  }
+}
+
 ' ${coord-:"$coord"}
