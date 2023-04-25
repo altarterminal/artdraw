@@ -8,12 +8,11 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -p<開始座標> [座標ファイル]
-	Options : -c<対象文字>
+	Options :
 
 	開始座標から到達できる連続領域の座標を深さ優先順にソートする。
 
 	-pオプションで探索の開始座標を指定する。
-	-cオプションで領域を構成する座標を指定できる。デフォルトは■。
 
 	座標ファイルのデータは以下の形式であることを想定する。
 	 <x座標> <y座標>
@@ -28,7 +27,6 @@ print_usage_and_exit () {
 # 変数を初期化
 opr=''
 opt_p=''
-opt_c='■'
 
 # 引数をパース
 i=1
@@ -37,7 +35,6 @@ do
   case "$arg" in
     -h|--help|--version) print_usage_and_exit ;;
     -p*)                 opt_p=${arg#-p}      ;;
-    -c*)                 opt_c=${arg#-c}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -67,16 +64,9 @@ if ! printf '%s\n' "$opt_p" | grep -Eq '^[0-9]+,[0-9]+$'; then
   exit 31
 fi
 
-# 有効な文字であるか判定
-if ! printf '%s\n' "$opt_c" | grep -Eq '^.$'; then
-  echo "${0##*/}: \"$opt_c\" invalid character" 1>&2
-  exit 41
-fi
-
 # パラメータを決定
 coord=$opr
 sp=$opt_p
-tchar=$opt_c
 
 ######################################################################
 # 本体処理
@@ -85,13 +75,12 @@ tchar=$opt_c
 gawk '
 BEGIN {
   # パラメータを設定
-  sp    = "'"${sp}"'";
-  tchar = "'"${tchar}"'";
+  sp = "'"${sp}"'";
 
   # パラメータを初期化
-  pn = 0; # 点数
-  inpx[1];    # 入力点のx座標
-  inpy[1];    # 入力点のy座標
+  pn = 0;  # 入力点数
+  inpx[1]; # 入力点のx座標
+  inpy[1]; # 入力点のy座標
 
   # 座標の最大値を初期化
   pxmax = -1;
@@ -104,6 +93,7 @@ BEGIN {
 }
 
 {
+  # 変数名をつける
   curpx = $1;
   curpy = $2;
 
@@ -127,22 +117,22 @@ END {
   nst = 1;
 
   # 空のキャンバスを作成
-  for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) {
-      map[i,j] = "blank";
+  for (j = 1; j <= height; j++) {
+    for (i = 1; i <= width; i++) {
+      map[j,i] = "blank";
     }
   }
 
-  # 存在する座標をチェック
+  # 存在する座標をマップ上でチェック
   for (i = 1; i <= pn; i++) {
-    map[inpx[i],inpy[i]] = "exist"
+    map[inpy[i],inpx[i]] = "exist";
   }
 
   # 開始座標が領域に含まれていないならエラー
   if (map[sy,sx] == "blank") {
     msg = "'"${0##*/}"': invalid start point";
     print msg > "/dev/stderr";
-    exit 51;
+    exit 41;
   }
 
   # 開始座標をスタックにプッシュ
@@ -162,14 +152,14 @@ END {
     print cx, cy;
 
     # 要素の周辺領域を探索
-    if (map[cy-1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy-1;push(c);}
-    if (map[cy-1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy-1;push(c);}
-    if (map[cy-1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy-1;push(c);}
-    if (map[cy  ,cx-1]=="exist") { c[1]=cx-1;c[2]=cy  ;push(c);}
-    if (map[cy  ,cx+1]=="exist") { c[1]=cx+1;c[2]=cy  ;push(c);}
-    if (map[cy+1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy+1;push(c);}
-    if (map[cy+1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy+1;push(c);}
-    if (map[cy+1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy+1;push(c);}
+    if (map[cy-1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy-1;push(c); }
+    if (map[cy-1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy-1;push(c); }
+    if (map[cy-1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy-1;push(c); }
+    if (map[cy  ,cx-1]=="exist") { c[1]=cx-1;c[2]=cy  ;push(c); }
+    if (map[cy  ,cx+1]=="exist") { c[1]=cx+1;c[2]=cy  ;push(c); }
+    if (map[cy+1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy+1;push(c); }
+    if (map[cy+1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy+1;push(c); }
+    if (map[cy+1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy+1;push(c); }
   }
 }
 
@@ -200,5 +190,4 @@ function isempty() {
   if (nst == 1) { return "empty"; }
   else          { return "some";  }
 }
-
 ' ${coord-:"$coord"}
