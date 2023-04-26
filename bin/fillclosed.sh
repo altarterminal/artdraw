@@ -8,14 +8,12 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -p<座標> [キャンバスファイル]
-	Options : -r<行数> -c<列数> -s<文字>
+	Options : -s<文字>
 
 	座標（"x,y"のように指定）と４連結している閉曲線内を塗りつぶす。
 	閉曲線は"■"で、閉曲線内は"□"で構成されているとする。
 
-	-pオプションで塗りつぶしたい閉曲線内の一点の座標を指定する。
-	-rオプションで出力する画像の行数を指定できる。デフォルトは20。
-	-cオプションで出力する画像の列数を指定できる。デフォルトは40。
+	-pオプションで塗りつぶしたい閉曲線内の座標（探索開始座標）を指定する。
 	-sオプションで塗りつぶしの文字を指定する。デフォルトは"■"
 	USAGE
   exit 1
@@ -27,8 +25,7 @@ print_usage_and_exit () {
 
 # 変数を初期化
 opr=''
-opt_r='20'
-opt_c='40'
+opt_p=''
 opt_s='■'
 
 # 引数をパース
@@ -38,8 +35,6 @@ do
   case "$arg" in
     -h|--help|--version) print_usage_and_exit ;;
     -p*)                 opt_p=${arg#-p}      ;;
-    -r*)                 opt_r=${arg#-r}      ;;
-    -c*)                 opt_c=${arg#-c}      ;;
     -s*)                 opt_s=${arg#-s}      ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
@@ -70,52 +65,35 @@ if ! printf '%s\n' "$opt_p" | grep -Eq '^-?[0-9]+,-?[0-9]+$'; then
   exit 31
 fi
 
-# 有効な数値であるか判定
-if ! printf '%s\n' "$opt_r" | grep -Eq '^[0-9]+$'; then
-  echo "${0##*/}: \"$opt_r\" invalid number" 1>&2
-  exit 41
-fi
-
-# 有効な数値であるか判定
-if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
-  echo "${0##*/}: \"$opt_c\" invalid number" 1>&2
-  exit 51
-fi
-
 # 有効な文字であるか判定
 if ! printf '%s\n' "$opt_s" | grep -q '^.$'; then
   echo "${0##*/}: \"$opt_s\" invalid charactor" 1>&2
-  exit 61
+  exit 41
 fi
 
 # パラメータを決定
 content=$opr
-c0=$opt_p
-height=$opt_r
-width=$opt_c
+sp=$opt_p
 fchar=$opt_s
 
 ######################################################################
 # 本体処理
 ######################################################################
 
-# 輝度値を入力
-cat ${content-:"$content"}                                           |
-
 gawk -v FS='' '
+######################################################################
+# メイン
+######################################################################
+
 BEGIN {
-  # 開始座標の情報を設定（x,y）
-  c0 = "'"${c0}"'";
-  split(c0, ary, ",");
-  x0 = ary[1];
-  y0 = ary[2];
-
-  # 塗りつぶし文字を設定
-  fchar = "'"${fchar}"'"
-
   # パラメータを設定
-  height = '"${height}"';
-  width  = '"${width}"';
+  sp    = "'"${sp}"'";
+  fchar = "'"${fchar}"'";
+
+  # 開始座標の情報を分離
+  split(sp, ary, ",");
+  sx = ary[1];
+  sy = ary[2];
 }
 
 {
@@ -124,37 +102,38 @@ BEGIN {
 }
 
 END {
+  # 別の変数名をつける
+  width  = NF;
+  height = NR;
+
   # スタックを初期化（グローバル変数）
   st[1];
   nst = 1;
 
   # スタックの底に開始座標を入れる
-  c[1] = x0; c[2] = y0;
-  push(c);
+  buf[sy,sx] = fchar;
+  c[1] = sx; c[2] = sy; push(c);
 
-  while(1) {
+  # スタックが空になるまで繰り返す
+  while (isempty() == "no") {
     pop(c); x = c[1]; y = c[2];
-    if (x == "null") { break; }
-    else {
-      if (buf[y,x+1]=="□"){buf[y,x+1]=fchar;c[1]=x+1;c[2]=y;  push(c);}
-      if (buf[y,x-1]=="□"){buf[y,x-1]=fchar;c[1]=x-1;c[2]=y;  push(c);}
-      if (buf[y+1,x]=="□"){buf[y+1,x]=fchar;c[1]=x  ;c[2]=y+1;push(c);}
-      if (buf[y-1,x]=="□"){buf[y-1,x]=fchar;c[1]=x  ;c[2]=y-1;push(c);}
-    }
-  }
 
-  width  = NF;
-  height = NR;
+    if (buf[y,x+1]=="□"){buf[y,x+1]=fchar;c[1]=x+1;c[2]=y  ;push(c);}
+    if (buf[y,x-1]=="□"){buf[y,x-1]=fchar;c[1]=x-1;c[2]=y  ;push(c);}
+    if (buf[y+1,x]=="□"){buf[y+1,x]=fchar;c[1]=x  ;c[2]=y+1;push(c);}
+    if (buf[y-1,x]=="□"){buf[y-1,x]=fchar;c[1]=x  ;c[2]=y-1;push(c);}
+  }
 
   # キャンバスを出力
   for (i = 1; i <= height; i++) {
-    for (j = 1; j <= width; j++) {
-      printf "%s", buf[i,j];
-    }
-
+    for (j = 1; j <= width; j++) { printf "%s", buf[i,j]; }
     print "";
   }
 }
+
+######################################################################
+# ユーティリティ
+######################################################################
 
 function push(c,  x,y) {
   x = c[1];
@@ -175,4 +154,9 @@ function pop(c,  ary) {
     c[2] = ary[2];
   }
 }
-'
+
+function isempty() {
+  if (nst == 1) { return "yes"; }
+  else          { return "no";  }
+}
+' ${content-:"$content"}
