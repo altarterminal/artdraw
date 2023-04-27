@@ -63,22 +63,17 @@ if ! printf '%s\n' "$opt_s" | grep -Eq '^.?$'; then
 fi
 
 # パラメータを決定
-geo=$opr
+draw=$opr
 sep=$opt_s
 
 ######################################################################
 # 本体処理
 ######################################################################
 
-# コンテンツを入力
-cat ${geo:+"$geo"}                                                   |
-
 gawk -v FS="$sep" -v OFS=' ' '
 {
-  ridx = NR;
-
   for (cidx = 1; cidx <= NF; cidx++) {
-     print ridx, cidx, $cidx;
+     print cidx, NR, $cidx;
   }
 }
-'
+' ${draw:+"$draw"}
