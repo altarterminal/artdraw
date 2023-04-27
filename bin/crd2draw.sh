@@ -74,7 +74,7 @@ if ! printf '%s\n' "$opt_c" | grep -Eq '^[0-9]+$'; then
 fi
 
 # パラメータを決定
-coord=$opr
+crd=$opr
 height=$opt_r
 width=$opt_c
 
@@ -82,7 +82,6 @@ width=$opt_c
 # 本体処理
 ######################################################################
 
-# 輝度値を入力
 gawk '
 BEGIN {
   # パラメータを設定
@@ -128,4 +127,4 @@ END {
     }
   }
 }
-' ${coord-:"$coord"}
+' ${crd-:"$crd"}
