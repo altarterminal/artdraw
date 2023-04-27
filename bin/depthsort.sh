@@ -8,11 +8,12 @@ set -eu
 print_usage_and_exit () {
   cat <<-USAGE 1>&2
 	Usage   : ${0##*/} -p<開始座標> [座標ファイル]
-	Options :
+	Options : -r
 
 	開始座標から到達できる連続領域の座標を深さ優先順にソートする。
 
 	-pオプションで探索の開始座標を指定する。
+	-rオプションで開始座標から到達しない領域の座標を標準エラー出力に出力する。
 
 	座標ファイルのデータは以下の形式であることを想定する。
 	 <x座標> <y座標>
@@ -27,6 +28,7 @@ print_usage_and_exit () {
 # 変数を初期化
 opr=''
 opt_p=''
+opt_r='no'
 
 # 引数をパース
 i=1
@@ -35,6 +37,7 @@ do
   case "$arg" in
     -h|--help|--version) print_usage_and_exit ;;
     -p*)                 opt_p=${arg#-p}      ;;
+    -r)                  opt_r='yes'          ;;
     *)
       if [ $i -eq $# ] && [ -z "$opr" ]; then
         opr=$arg
@@ -67,6 +70,7 @@ fi
 # パラメータを決定
 crd=$opr
 sp=$opt_p
+isrev=$opt_r
 
 ######################################################################
 # 本体処理
@@ -79,7 +83,8 @@ gawk '
 
 BEGIN {
   # パラメータを設定
-  sp = "'"${sp}"'";
+  sp    = "'"${sp}"'";
+  isrev = "'"${isrev}"'";
 
   # パラメータを初期化
   pn = 0;  # 入力点数
@@ -140,8 +145,6 @@ END {
 
   # 開始座標をスタックにプッシュ
   c[1]=sx; c[2]=sy; setmap(c[1],c[2],"marked"); push(c);
-  # マップ上でマーク
-
 
   # 深さ優先探索を開始
   while(isempty() == "no") {
@@ -177,6 +180,15 @@ END {
     }
     if (getmap(cx+1,cy+1)=="exist") {
       c[1]=cx+1; c[2]=cy+1; setmap(c[1],c[2],"marked"); push(c);
+    }
+  }
+
+  # 到達しなかった座標を出力
+  if (isrev == "yes") {
+    for (i = 1; i <= pn; i++) {
+      if (getmap(inpx[i], inpy[i]) != "marked") {
+        print inpx[i], inpy[i] > "/dev/stderr";
+      }
     }
   }
 }
