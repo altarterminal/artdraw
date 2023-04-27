@@ -65,7 +65,7 @@ if ! printf '%s\n' "$opt_p" | grep -Eq '^[0-9]+,[0-9]+$'; then
 fi
 
 # パラメータを決定
-coord=$opr
+crd=$opr
 sp=$opt_p
 
 ######################################################################
@@ -120,27 +120,28 @@ END {
   st[1];
   nst = 1;
 
+  # 状態マップを初期化（グローバル変数なので注意）
+  map[1,1];
+
   # 空のキャンバスを作成
   for (j = 1; j <= height; j++) {
-    for (i = 1; i <= width; i++) {
-      map[j,i] = "blank";
-    }
+    for (i = 1; i <= width; i++) { setmap(i, j, "blank"); }
   }
 
   # 存在する座標をマップ上でチェック
-  for (i = 1; i <= pn; i++) {
-    map[inpy[i],inpx[i]] = "exist";
-  }
+  for (i = 1; i <= pn; i++) { setmap(inpx[i], inpy[i], "exist"); }
 
   # 開始座標が領域に含まれていないならエラー
-  if (map[sy,sx] == "blank") {
+  if (getmap(sx, sy) == "blank") {
     msg = "'"${0##*/}"': invalid start point";
     print msg > "/dev/stderr";
     exit 41;
   }
 
   # 開始座標をスタックにプッシュ
-  c[1] = sx; c[2] = sy; push(c);
+  c[1]=sx; c[2]=sy; setmap(c[1],c[2],"marked"); push(c);
+  # マップ上でマーク
+
 
   # 深さ優先探索を開始
   while(isempty() == "no") {
@@ -149,27 +150,48 @@ END {
     # スタックから一要素を取得
     pop(c); cx = c[1]; cy = c[2];
 
-    # 要素をマップ上でマーク
-    map[cy,cx] = "marked";
-
     # 要素を出力
     print cx, cy;
 
     # 要素の周辺領域を探索
-    if (map[cy-1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy-1;push(c); }
-    if (map[cy-1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy-1;push(c); }
-    if (map[cy-1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy-1;push(c); }
-    if (map[cy  ,cx-1]=="exist") { c[1]=cx-1;c[2]=cy  ;push(c); }
-    if (map[cy  ,cx+1]=="exist") { c[1]=cx+1;c[2]=cy  ;push(c); }
-    if (map[cy+1,cx-1]=="exist") { c[1]=cx-1;c[2]=cy+1;push(c); }
-    if (map[cy+1,cx  ]=="exist") { c[1]=cx  ;c[2]=cy+1;push(c); }
-    if (map[cy+1,cx+1]=="exist") { c[1]=cx+1;c[2]=cy+1;push(c); }
+    if (getmap(cx-1,cy-1)=="exist") {
+      c[1]=cx-1; c[2]=cy-1; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx  ,cy-1)=="exist") {
+      c[1]=cx  ; c[2]=cy-1; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx+1,cy-1)=="exist") {
+      c[1]=cx+1; c[2]=cy-1; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx-1,cy  )=="exist") {
+      c[1]=cx-1; c[2]=cy  ; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx+1,cy  )=="exist") {
+      c[1]=cx+1; c[2]=cy  ; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx-1,cy+1)=="exist") {
+      c[1]=cx-1; c[2]=cy+1; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx  ,cy+1)=="exist") {
+      c[1]=cx  ; c[2]=cy+1; setmap(c[1],c[2],"marked"); push(c);
+    }
+    if (getmap(cx+1,cy+1)=="exist") {
+      c[1]=cx+1; c[2]=cy+1; setmap(c[1],c[2],"marked"); push(c);
+    }
   }
 }
 
 ######################################################################
 # ユーティリティ
 ######################################################################
+
+# マップの状態を設定（mapはグローバル変数）
+function getmap(x,y) {
+  return map[y,x];
+}
+function setmap(x,y,state) {
+  map[y,x] = state;
+}
 
 # スタックへのプッシュ（st,nstはグローバル変数）
 function push(c,  x,y) {
@@ -198,4 +220,4 @@ function isempty() {
   if (nst == 1) { return "yes"; }
   else          { return "no";  }
 }
-' ${coord-:"$coord"}
+' ${crd-:"$crd"}
