@@ -201,6 +201,8 @@ END {
 function getmap(x,y) {
   return map[y,x];
 }
+
+# マップの状態を取得（mapはグローバル変数）
 function setmap(x,y,state) {
   map[y,x] = state;
 }
