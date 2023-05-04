@@ -10,12 +10,12 @@ print_usage_and_exit () {
 	Usage   : ${0##*/} [パラメータ]
 	Options : -t<周期> -o<位相> -a<振幅> -d<出力長>
 
-	2点を端点とする線分が通過する座標（整数）を計算する。
+	正弦の値を計算する。
 
-	-tオプションで周期（ピクセル）を指定できる。デフォルトは40ピクセル（= 2pi）。
+	-tオプションで周期の長さ（ピクセル）を指定できる。デフォルトは40ピクセル。
 	-oオプションで初期位相（度数法）を指定できる。デフォルトは0。
-	-aオプションで振幅（ピクセル）を指定できる。デフォルトは10ピクセル（= 1）。
-	-dオプションで出力長（ピクセル）を指定できる。デフォルトは40ピクセル（= 2pi）。
+	-aオプションで振幅（ピクセル）を指定できる。デフォルトは10ピクセル。
+	-dオプションで出力長（ピクセル）を指定できる。デフォルトは40ピクセル。
 	USAGE
   exit 1
 }
@@ -55,10 +55,10 @@ do
 done
 
 # 有効なパラメータ指定か確認
-if ! printf '%s\n' "$opr" | grep -Eq '^[0-9]+,[0-9]+,[0-9]+,[0-9]+$'; then
-  echo "${0##*/}: \"$opr\" invalid parameter" 1>&2
-  exit 21
-fi
+# if ! printf '%s\n' "$opr" | grep -Eq '^[0-9]+,[0-9]+,[0-9]+,[0-9]+$'; then
+#   echo "${0##*/}: \"$opr\" invalid parameter" 1>&2
+#   exit 21
+# fi
 
 
 # 有効な数値であるか判定
@@ -90,7 +90,7 @@ param=$opr
 period=$opt_t
 phase=$opt_o
 amp=$opt_a
-duration=$$opt_d
+duration=$opt_d
 
 ######################################################################
 # 本体処理
@@ -100,28 +100,37 @@ gawk '
 BEGIN {
   # パラメータを設定
   period   = '"${period}"';
-  phase    = '"${offset}"';
+  phase    = '"${phase}"';
   amp      = '"${amp}"';
   duration = '"${duration}"';
 
   pi  = 3.1415;
   pi2 = pi * 2.0;
 
-  # 物理次元での周期（浮動小数点数）
-  physperiod = pi2 * period / 40.0;
+  # ピクセルあたりの物理次元の長さ（浮動小数点数）
+  physperiod = pi2 / period;
 
   # 物理次元での振幅（浮動小数点数）
-  physamp = 1.0 * amp / 10.0;
+  physamp = 1.0 * amp;
 
   # 物理次元での初期位相（浮動小数点数）
-  physphase = pi2 * phase / 360;
-
-  # イテレーションあたりの増分
+  physphase = pi2 * phase / 360.0;
 
   for (i = 1; i <= duration; i++) {
-    #buf[i] = physamp * sin(
+    # 浮動小数点数での計算
+    buf[i] = physamp * sin((i-1) * physperiod + physphase);
+  }
+
+  # 出力
+  for (i = 1; i <= duration; i++) {
+    print round(buf[i]), i;
   }
 
   exit;
+}
+
+function round(x) {
+  if (x >= 0) { return int(x);       }
+  else        { return -1*int(-1*x); }
 }
 '
