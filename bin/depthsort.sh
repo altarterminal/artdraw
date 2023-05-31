@@ -302,16 +302,6 @@ function enq(c,   x,y) {
 
   q[qhead] = x "," y;
   qhead = qhead % qlen + 1;
-
-  # 1 2 3 4 5   (qlen = 5)
-  # □■■■■　
-  # ↑↑
-  # h t
-
-  # 1 2 3 4 5
-  # ■■■■□　
-  # ↑      ↑
-  # t       h
 }
 
 # デキュー
